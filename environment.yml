@@ -1,0 +1,29 @@
+name: badlandsBe
+
+channels:
+  - conda-forge
+  - defaults
+  - anaconda
+
+dependencies:
+  - python=3.6
+  - pip
+  - gfortran
+  - triangle
+  - meshplex
+  - numpy
+  - h5py
+  - six
+  - setuptools
+  - pandas
+  - scipy
+  - scikit-image
+  - gFlex
+  - matplotlib
+  - cmocean
+  - shapely
+  - descartes
+
+  - pip:
+    - tribad
+    - jupyter

@@ -1,2 +1,7 @@
-# badlands-Be
-River incision, 10Be production and transport in a source-to-sink sediment system (Var catchment, SW Alps).
+# 10Be Production & Transport from Source-to-Sink
+## Credit: Carole Petit
+
+Université Côte d'Azur, CNRS, Observatoire de la Côte d'Azur, IRD, Géoazur \
+250 rue Albert Einstein, Sophia Antipolis 06560 Valbonne, France.
+
+Development : carole.petit@univ-cotedazur.fr
