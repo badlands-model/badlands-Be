@@ -247,6 +247,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
 
     # Initial cumulative elevation change
     walltime = time.time()
+
     timestep, sedchange, erosion, deposition, sed_be, qprop, slopeTIN = flow.compute_sedflux(FVmesh.control_volumes, elevation, qprop, 
                                           bedrock_Be, rain, fillH, CFLtime, activelay, eroCk, force.rivQs, 
                                           force.sealevel, input.perc_dep, input.slp_cr, FVmesh.neighbours, verbose=False)

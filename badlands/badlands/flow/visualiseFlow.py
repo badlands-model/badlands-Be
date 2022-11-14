@@ -122,6 +122,7 @@ def write_hdf5(folder, h5file, step, coords, elevation, discharge, chi,
     """
 
     h5file = folder+'/'+h5file+str(step)+'.hdf5'
+
     with h5py.File(h5file, "w") as f:
 
         # Write node coordinates and elevation
@@ -146,6 +147,7 @@ def write_hdf5(folder, h5file, step, coords, elevation, discharge, chi,
 
         f.create_dataset('discharge',shape=(len(discharge), 1), dtype='float64', compression='gzip')
         f["discharge"][:,0] = discharge/3.154e7
+        #f["discharge"][:,0] = discharge
 
 def _write_xdmf(folder, xdmffile, xmffile, step):
     """

@@ -184,7 +184,7 @@ class cosmoProd:
 
         # computes 10Be concentration at the surface on each node
         # use Eulerian formulation see paper by Knudsen et al. 2019 Quater. Geol.
-        # TCN concentration is in atoms per gram of Qtz so we convert erosion rate
+        # TCN concentration is in atoms per gram of Qtz so we convert the erosion rate
         # taking into account the Qtz concentration
 
         Nn = self.N_dic['Nnval']
@@ -196,6 +196,7 @@ class cosmoProd:
             An = (self.Be_lambda + erosion/self.L_n)*tstep
             Af = (self.Be_lambda + erosion/self.L_f)*tstep
             As = (self.Be_lambda + erosion/self.L_s)*tstep
+            # adapts 10Be concentration to new erosion rate
             if erosion > 0 and elev[i] >= seal :
                Nn[i] = numpy.exp(-An) * (Nn[i] + prod_raten[i] * 1/(self.Be_lambda + erosion/self.L_n) * (numpy.exp(An)-1))
                Nf[i] = numpy.exp(-Af) * (Nf[i] + prod_ratef[i] * 1/(self.Be_lambda + erosion/self.L_f) * (numpy.exp(Af)-1))
@@ -241,15 +242,21 @@ class cosmoProd:
         """
         numpts  = len(elev)
         N_Be    = numpy.zeros(numpts)
-        prod_raten,prod_rates,prod_ratef,prod_rate = self.Be_production_rate(elev,tshield,qprop)
+
+        # eliminates interpolation effect on quartz map
+        qp                             = numpy.copy(qprop)
+        qmax                           = numpy.max(qprop)
+        qp[numpy.where(qprop<=0.1)[0]] = 0.
+        qp[numpy.where(qprop>0.4)[0]]  = qmax
+
+        prod_raten,prod_rates,prod_ratef,prod_rate = self.Be_production_rate(elev,tshield,qp)
 
         # computes 10Be concentration at the surface on each node
         # in g.cm-2.a-1
 
-        # eliminates interpolation effect on the borders of the quartz map
-        qmax          = numpy.max(qprop)
-        erosion_rate  = erorate*100*self.rho*qmax
+        erosion_rate  = erorate*100*self.rho*qp
 
+        # compute initial 10Be concentration assuming steady state
         Nn = prod_raten / ( erosion_rate/self.L_n + self.Be_lambda)
         Nf = prod_ratef / ( erosion_rate/self.L_f + self.Be_lambda)
         Ns = prod_rates / ( erosion_rate/self.L_s + self.Be_lambda)
@@ -263,7 +270,7 @@ class cosmoProd:
     def update_Qz_Be(self,nbe,qpr):
        """ Update Quartz map removing nodes under a quartz concentration threshold
        """
-       noQIDs     = numpy.where(qpr < 0.005)
+       noQIDs     = numpy.where(qpr < 0.001)
        qpr[noQIDs]= 0.
        nbe[noQIDs]= 0.
        return nbe,qpr

@@ -1,0 +1,14 @@
+cmocean
+colorlover
+gFlex>=1.1.0
+h5py>=2.8.0
+matplotlib>=3.0
+numpy>=1.15.0
+pandas>=0.24
+plotly
+pyevtk
+scikit-image>=0.15
+scipy>=1.2
+setuptools>=38.4.0
+six>=1.11.0
+tribad

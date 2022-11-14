@@ -755,9 +755,8 @@ class flowNetwork:
             outload = numpy.sum(sedload[self.outsideIDs,:])
 
             # Compute Quartz proportion and 10Be concentration in deposited sediments
-
             deposum = numpy.sum(cdepo,axis=1)
-            depoIDs = numpy.where(deposum > 0)[0]
+            depoIDs = numpy.where((deposum > 0) & (qdep>0)) [0]
             q_prop[depoIDs] = qdep[depoIDs]/deposum[depoIDs]
             QIDs = numpy.where(qdep>0)[0]
             sed_be[QIDs] = n_at_be[QIDs]/qdep[QIDs]/1000/rhosed
@@ -790,8 +789,7 @@ class flowNetwork:
 
                     # Compute Quartz proportion and 10Be concentration in deposited sediments
                     deposum                  = numpy.sum(depo[plainID,:],axis=1)
-                    depoIDs                  = numpy.where(deposum > 0)[0]
-
+                    depoIDs                  = numpy.where((deposum > 0) & (qdep[plainID]>0)) [0]
                     q_prop[plainID[depoIDs]] = qdep[plainID[depoIDs]]/deposum[depoIDs]
                     QIDs                     = numpy.where(qdep[plainID]>0)[0]
                     sed_be[plainID[QIDs]]    = n_at_be[plainID[QIDs]]/qdep[plainID[QIDs]]/1000/rhosed
@@ -814,18 +812,19 @@ class flowNetwork:
                         tmpd = numpy.sum(tmpdep[tmp,:]*Acell[tmp].reshape(len(Acell[tmp]),1))
                         dfrac = numpy.sum(depo[landIDs[p],:])/tmpd
                         tmpdep[tmp,:] *= dfrac
+                        qdep[tmp] *= dfrac
                         deposition[tmp,:] += tmpdep[tmp,:]
-
-                        # Compute Quartz proportion and 10Be concentration in deposited sediments
-                        depsumtmp = numpy.sum(tmpdep[tmp,:], axis=1)
-                        depsumtot = numpy.sum(depo[tmp,:], axis=1)
-                        frac      = depsumtmp/depsumtot
-                        frac[numpy.where(depsumtot <= 0.)] = 0.
-                        depoIDs              = numpy.where(depsumtmp > 0)[0]
-                        q_prop[tmp[depoIDs]] = qdep[tmp[depoIDs]]/depsumtmp[depoIDs]*frac
-                        QIDs                 = numpy.where(qdep[tmp]>0)[0]
+                        deposum   = numpy.sum(tmpdep[tmp,:],axis=1)*Acell[tmp]
+                        depoIDs   = numpy.where((deposum > 0) & (qdep[tmp]>0)) [0]
+                        q_prop[tmp[depoIDs]] = qdep[tmp[depoIDs]]/deposum[depoIDs]
+                        QIDs      = numpy.where(qdep[tmp]>0)[0]
                         sed_be[tmp[QIDs]]    = n_at_be[tmp[QIDs]]/qdep[tmp[QIDs]]/1000/rhosed
-                        depo[tmp,:]         -= tmpdep[tmp,:]*Acell[tmp].reshape(len(Acell[tmp]),1)
+                    #deposum   = numpy.sum(tmpdep[landIDs,:],axis=1)*Acell[landIDs]
+                    #depoIDs   = numpy.where((deposum > 0) & (qdep[landIDs]>0)) [0]
+
+                    #q_prop[landIDs[depoIDs]] = qdep[landIDs[depoIDs]]/deposum[depoIDs]
+                    #QIDs                     = numpy.where(qdep[landIDs]>0)[0]
+                    #sed_be[landIDs[QIDs]]    = n_at_be[landIDs[QIDs]]/qdep[landIDs[QIDs]]/1000/rhosed
                     depo[landIDs,:] = 0.
                     if verbose:
                         print("   - Compute land pit deposition ", time.time() - time1)
@@ -837,16 +836,17 @@ class flowNetwork:
                     seaIDs = seaid[:nsea]
                     seavol = numpy.zeros(depo.shape)
                     seavol[seaIDs,:] = depo[seaIDs,:]
-                    seadep, qdep, n_at_be = pdalgo.marine_distribution(elev, seavol, qdep,
+                    seadep, qdep_s, n_at_be_s = pdalgo.marine_distribution(elev, seavol, qdep,
                         n_at_be, sealevel, self.borders, seaIDs, slopeTIN)
                     deposition += seadep
 
                     # Compute Quartz proportion and 10Be concentration in deposited sediments
                     deposum            = numpy.sum(seadep, axis = 1)
-                    Q_depoIDs          = numpy.where(qdep > 0)[0]
-                    q_prop[Q_depoIDs]  = qdep[Q_depoIDs] / deposum[Q_depoIDs]
-                    Be_depoIDs         = numpy.where(n_at_be > 0)[0]
-                    sed_be[Be_depoIDs] = n_at_be[Be_depoIDs] / qdep[Be_depoIDs]  / 1000 / rhosed
+                    Q_depoIDs          = numpy.where((deposum > 0) & (qdep_s>0)) [0]
+
+                    q_prop[Q_depoIDs]  = qdep_s[Q_depoIDs] / deposum[Q_depoIDs]
+                    Be_depoIDs         = numpy.where(n_at_be_s > 0)[0]
+                    sed_be[Be_depoIDs] = n_at_be_s[Be_depoIDs] / qdep_s[Be_depoIDs]  / 1000 / rhosed
                     # depo -= seadep*Acell.reshape(len(Acell),1)
                     depo[seaIDs,:] = 0.
                     if verbose:
@@ -867,9 +867,6 @@ class flowNetwork:
                 frac = depotot/erotot
                 erosion[self.insideIDs,:] *= frac
                 sedflux[self.insideIDs,:] = erosion[self.insideIDs,:] + deposition[self.insideIDs,:]
-
-            # Compute Quartz and 10Be deposition
-
 
             if verbose:
                 print("   - Total sediment flux time ", time.time() - time0)

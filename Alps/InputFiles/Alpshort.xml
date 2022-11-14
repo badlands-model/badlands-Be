@@ -42,11 +42,11 @@
 <denudation_rate>2.e-4</denudation_rate>
 <shield_factor>1.</shield_factor>
 <latitude>40.</latitude>
-</cosmonuclides>
+</cosmonuclides>    
 <creep>
 <caerial>0.001</caerial>
 <cmarine>0.025</cmarine>
 <criver>0.025</criver>
-</creep>
-<outfolder>Output/Alpsmodel_short</outfolder>
+</creep>        
+<outfolder>/mnt/d/SPM/Output/Alpsmodel_short</outfolder>
 </badlands>

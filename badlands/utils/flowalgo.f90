@@ -916,7 +916,7 @@ pylNodesNb, pygNodesNb, pyRockNb)
   real(kind=8),dimension(pygNodesNb),intent(out) :: pyDensity
   real(kind=8),dimension(pygNodesNb),intent(out) :: pyDepoQ
   real(kind=8),dimension(pygNodesNb),intent(out) :: pyDepoBe
-
+  
   integer :: n, donor, recvr, nID, tmpID, r
   real(kind=8) :: maxh, dh, waterH, fct, Qt, totflx, totspl, newdist,rhosed,rhowat,tauratio
   real(kind=8) :: dist, slp, slpdh, updh, tmpdist, totdist, width, frac, upperslp, bedfrac, Cs
@@ -943,7 +943,7 @@ pylNodesNb, pygNodesNb, pyRockNb)
   updist = 0.
   Qz_Fluxes=0.
   Be_Fluxes=0.
-
+  
   do n = pylNodesNb, 1, -1
 
     SPL = 0.
@@ -970,7 +970,7 @@ pylNodesNb, pygNodesNb, pyRockNb)
         enddo
         if (pyDischarge(donor) > 0.) then
            if (pyA .gt. 0 .and. pyB .gt. 0) then
-                   Cs = pyA*(pyDischarge(donor))**pyB
+                   Cs = (pyA*(pyDischarge(donor)/3.154e7)**pyB)*1000
                    pyDensity(donor) = rhowat + Cs 
            else
                    pyDensity(donor) = (totflx/(dt*pyDischarge(donor)))*rhosed+(1-totflx/(dt*pyDischarge(donor)))*rhowat
@@ -1273,11 +1273,11 @@ pylNodesNb, pygNodesNb, pyRockNb)
           pitDepBe(r) = Be_Fluxes(donor,r)
           totdist = totdist + pitDep(r)
           if (pitDep(r) > 0) then
-                  fracQ(r) = pitDepQ(r)/pitDep(r)
-                  fracBe(r) = pitDepBe(r)/pitDep(r)
+                fracQ(r) = pitDepQ(r)/pitDep(r)
+                fracBe(r) = pitDepBe(r)/pitDep(r)
           else
-                  fracQ(r) = 0.
-                  fracBe(r) = 0.
+                fracQ(r) = 0.
+                fracBe(r) = 0.
           endif
         enddo
 
@@ -1315,11 +1315,11 @@ pylNodesNb, pygNodesNb, pyRockNb)
           do r = 1, pyRockNb
             frac =  sedFluxes(donor,r)/totflx
             if (sedFluxes(donor,r) > 0) then
-                    fracQ(r) = Qz_Fluxes(donor,r) / sedFluxes(donor,r)
-                    fracBe(r) = Be_Fluxes(donor,r) / sedFluxes(donor,r)
+                fracQ(r) = Qz_Fluxes(donor,r) / sedFluxes(donor,r)
+                fracBe(r) = Be_Fluxes(donor,r) / sedFluxes(donor,r)
             else
-                    fracQ(r) = 0.
-                    fracBe(r)= 0.
+                fracQ(r) = 0.
+                fracBe(r)= 0.
             endif
             erodep(r) = frac*maxh*pyArea(donor)
             erodepQ(r) = erodep(r)*fracQ(r)
@@ -1383,6 +1383,13 @@ pylNodesNb, pygNodesNb, pyRockNb)
         tmpdist = 0.
         do r = 1, pyRockNb
           tmpdist = tmpdist + pyDepo(tmpID,r)
+          !if (pitDep(r) > 0) then
+          !      fracQ(r) = pitDepQ(r)/pitDep(r)
+          !      fracBe(r) = pitDepBe(r)/pitDep(r)
+          !else
+          !      fracQ(r) = 0.
+          !      fracBe(r) = 0.
+          !endif
         enddo
 
         ! In case the depression is underwater
@@ -1440,10 +1447,13 @@ pylNodesNb, pygNodesNb, pyRockNb)
                pitDep(r) = (totdist - (pitVol(tmpID) - tmpdist))*frac
                newdist = newdist + pitDep(r)
                totflx = totflx + pyDepo(tmpID,r)
+
+               pyDepoQ(tmpID)  = pyDepoQ(tmpID) + (pitVol(tmpID) - tmpdist)*frac*fracQ(r) 
+               pyDepoBe(tmpID) = pyDepoBe(tmpID) + (pitVol(tmpID) - tmpdist)*frac*fracBe(r) 
+               pitDepQ(r) = pitDepQ(r) - (pitVol(tmpID) - tmpdist)*frac*fracQ(r)
+               pitDepBe(r) = pitDepBe(r) - (pitVol(tmpID) - tmpdist)*frac*fracBe(r) 
                pitDepQ(r) = 0.
                pitDepBe(r) = 0.
-               pyDepoQ(tmpID) = 0.
-               pyDepoBe(tmpID) = 0.
              enddo
              totdist = newdist
              pitVol(tmpID) = totflx
@@ -1464,9 +1474,8 @@ pylNodesNb, pygNodesNb, pyRockNb)
                 pyDepoQ(n) = 0.
         endif
   enddo
-
+  
   return
-
 end subroutine streampower
 
 

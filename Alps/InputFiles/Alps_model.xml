@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <badlands xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <grid>
-<demfile>../Data/initial_topo.csv</demfile>
 <boundary>fixed</boundary>
 <resfactor>1</resfactor>
 <nopit>1</nopit>
+<demfile>../Data/initial_topo.csv</demfile>
 </grid>
 <time>
 <start>0.</start>
@@ -13,7 +13,7 @@
 </time>
 <sea>
 <position>0.</position>
-<curve>../Data/sealevel100ka.txt</curve>
+<!--curve>../Data/sealevel100ka.txt</curve-->
 </sea>
 <precipitation>
 <climates>2</climates>
@@ -38,28 +38,28 @@
 <diffnb>5</diffnb>
 <diffprop>0.2</diffprop>
 <deepbasin>-2300.</deepbasin>
-<dens_crit>0</dens_crit>
+<dens_crit>0.</dens_crit>
 <a_rating>1.e-3</a_rating>
 <b_rating>1.6</b_rating>
 <erodibility>3.5e-6</erodibility>
 </sp_law>
 <cosmonuclides>
 <quartz_map>../Data/quartz_map.csv</quartz_map>
-<denudation_rate>2.e-4</denudation_rate>
+<denudation_rate>2.E-4</denudation_rate>
 <shield_factor>1.</shield_factor>
 <latitude>40.</latitude>
-</cosmonuclides>
+</cosmonuclides> 
 <ice_cover>
 <ice_curve>../Data/ice_ratio_100k.csv</ice_curve>
-<ice_map>../Data/ice_thickness.csv</ice_map>
+<ice_map>../Data/ice_thickness.csv</ice_map>    
 <ice_erosion>5.e-6</ice_erosion>
-</ice_cover>
+</ice_cover>     
 <creep>
 <caerial>0.001</caerial>
 <cmarine>0.025</cmarine>
 <criver>0.025</criver>
-</creep>
-<flexure>
+</creep> 
+<!--flexure>
 <ftime>10000.0</ftime>
 <dmantle>3300</dmantle>
 <dsediment>2500</dsediment>
@@ -69,6 +69,6 @@
 <boundary_E>0Slope0Shear</boundary_E>
 <boundary_S>0Slope0Shear</boundary_S>
 <boundary_N>0Slope0Shear</boundary_N>
-</flexure>
-<outfolder>Output/Alpsmodel</outfolder>
+</flexure-->       
+<outfolder>/mnt/d/SPM/Output/Alpsmodel</outfolder>
 </badlands>

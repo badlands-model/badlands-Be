@@ -238,6 +238,7 @@ class cosmoAnalyse:
             y_data = cord[:,1] 
             erotot = ero+diffus
             
+            # extract mean 10Be concentration in the basin points
             isQ = numpy.where(qpr[pointbasinIDs]>0.)[0]
             if len(isQ) > 0:
                 NBe = Be[pointbasinIDs[isQ]]
@@ -245,13 +246,14 @@ class cosmoAnalyse:
                 NBe = 0
             mean_Be    = numpy.mean(NBe) 
 
+            # extract mean 10Be concentration in bedrock points
             isQb = numpy.where(qpr[pointbedrockIDs]>0.)[0]
             if len(isQb) > 0:
                 mean_prod = numpy.mean(prod[pointbedrockIDs[isQb]])
                 mean_qp   = numpy.mean(qpr[pointbedrockIDs[isQb]])
             else:
                 mean_prod = 0.
-                mean_qp   = 1.
+                mean_qp   = 0.5
 
             # Mean erosion rate (g.cm-2.yr-1)
             # Here production is per gram of Qtz per year and 10Be concentration also
@@ -297,7 +299,7 @@ class cosmoAnalyse:
         return prodrate
 
     def extract_erodedBe (self,lat,filename,xmin,xmax,ymin,ymax,list_of_points=None):
-        """Extract the mean number of eroded 10Be atoms over a given area (square or list of points)
+        """Extract the mean number of eroded and deposited 10Be atoms over a given area (square or list of points)
         for a given timestep.
 
         meanBe
@@ -317,30 +319,50 @@ class cosmoAnalyse:
         qtz       = numpy.array(qtz)
         x_data    = cord[:,0]
         y_data    = cord[:,1]  
+
+        erotot    = numpy.zeros(len(nBe))
+        depotot   = numpy.zeros(len(nBe))
+
+        # eroded part
         erotot    = eros+diffus
         erotot[erotot > 0.] = 0.
-
-        erodedQ = -erotot * qtz
+        erodedQ  = -erotot * qtz
         erodedBe = erodedQ * nBe * 100 * cosmo.rho
+
+        #d eposited part
+        depotot   = eros+diffus
+        depotot[depotot < 0.] = 0.
+        depositedQ  = depotot * qtz
+        depositedBe = depositedQ * nBe * 100 * cosmo.rho
 
         if list_of_points is not None:
             pointIDs = numpy.array(list_of_points)
         else:
             pointIDs = numpy.where((x_data>xmin)&(x_data<xmax)&(y_data>ymin)&(y_data<ymax))[0]
 
-        isQ = numpy.where(erodedQ[pointIDs]>0.)[0]
-        Be  = erodedBe[pointIDs[isQ]]
-        Qz  = erodedQ[pointIDs[isQ]]
+        isQ     = numpy.where(erodedQ[pointIDs]>0.)[0]
+        Be      = erodedBe[pointIDs[isQ]]
+        Qz      = erodedQ[pointIDs[isQ]]
+        coord_ero = cord[pointIDs[isQ]]
+        isdepoQ = numpy.where(depositedQ[pointIDs]>0.)[0]
+        depoBe  = depositedBe[pointIDs[isdepoQ]]
+        depoQz   = depositedQ[pointIDs[isdepoQ]]
+        coord_depo = cord[pointIDs[isdepoQ]]
 
         if numpy.sum(Qz) > 0.:
             meanBe = numpy.sum(Be) / (numpy.sum(Qz)*100*cosmo.rho)
         else:
             meanBe = 0.
 
+        if numpy.sum(depoQz) > 0.:
+            meandepoBe = numpy.sum(depoBe) / (numpy.sum(depoQz)*100*cosmo.rho)
+        else:
+            meandepoBe = 0.    
+
         if f.__bool__():
             f.close()
 
-        return meanBe
+        return Be,Qz,depoBe,depoQz,meanBe,meandepoBe,coord_ero,coord_depo,cord,eros+diffus
 
     def extract_shielding(self,filename):
         """Extract the shielding value for a given timestep.
@@ -428,8 +450,8 @@ class cosmoAnalyse:
             else:
                 mean_Be = 0.
     
-            isprod    = numpy.where(prod[pointIDs]>0.)[0]
-            mean_prod = numpy.mean(prod[pointIDs[isprod]])
+            #isprod    = numpy.where(prod[pointIDs]>0.)[0]
+            mean_prod = numpy.mean(prod[pointIDs[isQ]])
     
             # mean average erosion rate
             mean_ero  = numpy.mean(erosion_rate[pointIDs])
