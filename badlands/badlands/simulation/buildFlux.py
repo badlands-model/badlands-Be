@@ -35,7 +35,8 @@ def streamflow(input, FVmesh, recGrid, force, hillslope, flow, elevation, \
         lGIDs: numpy 1D array containing the node indices.
         rain: numpy 1D array containing rainfall precipitation values.
         tNow: simulation time step.
-        ice: numpy array containing ice thickness (CP)
+        melt : numpy array containing meltwaters height (to be added to discharge)
+        ice: numpy array containing ice thickness
         verbose : (bool) when :code:`True`, output additional debug information (default: :code:`False`).
 
     Returns
@@ -132,9 +133,9 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
         cumdiff: cumulative total erosion/deposition changes.
         cumhill: cumulative hillslope erosion/deposition changes.
         cumfail: cumulative failure induced erosion/deposition changes.
-        bedrock_Be: 10Be concentration (at.g-1 of Qtz) in bedrock or old sediments (CP).
-        qprop : quartz proportion in bedrock or old sediments (CP).
-        ice : ice thickness (CP).
+        bedrock_Be: 10Be concentration (at of Qtz) in bedrock or old sediments.
+        qprop : quartz proportion in bedrock or old sediments (1 for 100% quartz).
+        ice : ice thickness.
         fillH: filled elevation mesh.
         disp: displacement values .
         inGIDs: nodes indices.
@@ -268,7 +269,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
     elevation += ed
     cumdiff += ed
 
-    # update 10Be concentration in newly deposited sediments (CP)
+    # update 10Be concentration in newly deposited sediments
     sedBeIDs             = np.where(ed>0.)[0]
     bedrock_Be[sedBeIDs] = sed_be[sedBeIDs]
 
@@ -293,7 +294,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
             diffmarine[flow.outsideIDs] = 0.
             maxstep = min(mindt,maxstep)
 
-            # Update Quartz and 10Be content in deposited sediments (CP)
+            # Update Quartz and 10Be content in deposited sediments
             sedBeIDs             = np.where(np.logical_and(diffQz>0., diffmarine>0.))[0]
             qprop[sedBeIDs]      = diffQz[sedBeIDs]
             bedrock_Be[sedBeIDs] = diffBe[sedBeIDs]
@@ -316,7 +317,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
                 sedpropflux[flow.outsideIDs,:] = 0.
 
                 # Update deposition for each rock type
-                # Update Quartz and 10Be content in deposited sediments (CP)
+                # Update Quartz and 10Be content in deposited sediments
                 deposition += sedpropflux
                 deposition[deposition<0] = 0.
                 sedBeIDs             = np.where(np.logical_and(diffQz > 0., difftot > 0.))[0]
@@ -373,7 +374,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
                 cumfail += difffail*maxstep
                 it += 1
 
-                # Update Quartz and 10Be content in deposited sediments (CP)
+                # Update Quartz and 10Be content in deposited sediments
                 sedBeIDs             = np.where(np.logical_and(diffQz > 0, difffail > 0))[0]
                 qprop[sedBeIDs]      = diffQz[sedBeIDs]
                 bedrock_Be[sedBeIDs] = diffBe[sedBeIDs]
@@ -395,7 +396,7 @@ def sediment_flux(input, recGrid, hillslope, FVmesh, tMesh, flow, force, rain, l
     diff_flux[flow.outsideIDs2] = 0.
     cdiff = diffcoeff*diff_flux*timestep
 
-    # Update Quartz and 10Be content in deposited sediments (CP)
+    # Update Quartz and 10Be content in deposited sediments
     sedBeIDs             = np.where(np.logical_and(diffQz > 0., cdiff > 0.))[0]
     qprop[sedBeIDs]      = diffQz[sedBeIDs]
     bedrock_Be[sedBeIDs] = diffBe[sedBeIDs]

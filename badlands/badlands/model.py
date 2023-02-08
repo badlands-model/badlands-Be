@@ -124,13 +124,12 @@ class Model(object):
             self.wavediff = None
 
          # Initialize TIN for quartz map, 10Be and ice thickness (CP2020)
-        self.qprop = np.zeros(self.totPts,dtype=float)
-        self.ice_map = np.zeros(self.totPts,dtype=float)
-        self.ice_thck = np.zeros(self.totPts,dtype=float)
+        self.qprop      = np.zeros(self.totPts,dtype=float)
+        self.ice_map    = np.zeros(self.totPts,dtype=float)
+        self.ice_thck   = np.zeros(self.totPts,dtype=float)
         self.bedrock_Be = np.zeros(self.totPts,dtype=float)
         self.prodrate = np.zeros(self.totPts,dtype=float)
         self.topo_shield = np.zeros(self.totPts,dtype=float)
-
         if self.input.Qmap :
             self.cosmo = cosmoProd.cosmoProd(self.input.latitude)
             if not self.input.restart:
@@ -141,7 +140,8 @@ class Model(object):
         if self.input.is_ice > 0: 
             self.ice_map[self.inIDs] = self.force.get_Ice(self.inIDs)
             self.force.getIceratio(self.tNow)
-            self.ice_thck   = self.force.getIcethck(self.ice_map,self.force.iceratio)
+            old_icethck = np.zeros(self.totPts,dtype=float)
+            self.ice_thck, self.melt_water = self.force.getIcethck(self.ice_map,self.force.iceratio, old_icethck)
             self.melt_water = np.zeros(self.totPts,dtype=float)
 
         # Initialize TIN slope (gradient)
@@ -345,21 +345,12 @@ class Model(object):
                 self.rain[self.inIDs] = self.force.get_Rain(self.tNow, self.elevation, self.inIDs)
                 rain_copy = np.copy(self.rain)
 
-            # update ice map and ice melt volume (CP2020)
+            # update ice map and ice melt volume that will contribute to discharge (CP2020)
             if self.input.is_ice > 0:
                 old_icethck = np.copy(self.ice_thck)
                 self.force.getIceratio(self.tNow)
-                self.ice_thck = self.force.getIcethck(self.ice_map,self.force.iceratio)
-                
-                # compute the height of ice that has molten
-                ice_melt                 = old_icethck - self.ice_thck
-                meltIDs                  = np.where(ice_melt >=0 )[0]
-
-                # converts molten ice to water height and equivalent 'rain'
-                self.melt_water          = np.zeros(self.totPts)
-                self.melt_water[meltIDs] = ice_melt[meltIDs]*0.93/self.input.tDisplay
-                self.rain          = np.copy(rain_copy)
-                iceIDs             = np.where(self.ice_thck > 10.)[0]
+                self.ice_thck, self.melt_water = self.force.getIcethck(self.ice_map,self.force.iceratio, old_icethck)
+                iceIDs             = np.where(self.ice_thck > 20.)[0]
                 self.rain[iceIDs]  = 0.
                 meltIDs            = np.where(self.melt_water > 0)[0]
                 self.rain[meltIDs] += self.melt_water[meltIDs]
@@ -585,20 +576,23 @@ class Model(object):
 
             old_cumdiff = np.copy(self.cumdiff)
             old_cumhill = np.copy(self.cumhill)
+            old_cumfail = np.copy(self.cumfail)
             old_t = self.tNow
 
             self.tNow, self.elevation, self.cumdiff, self.cumhill, self.cumfail, self.bedrock_Be, self.qprop, self.slopeTIN = buildFlux.sediment_flux(self.input, self.recGrid, self.hillslope, \
                               self.FVmesh, self.tMesh, self.flow, self.force, self.rain, self.lGIDs, self.applyDisp, self.straTIN, self.mapero,  \
                               self.cumdiff, self.cumhill, self.cumfail, self.bedrock_Be, self.qprop, self.ice_thck, self.fillH, self.disp, self.inGIDs, \
                               self.elevation, self.tNow, tStop, verbose)
-            erosion = self.cumdiff - old_cumdiff + self.cumhill - old_cumhill
+            erosion_diff = self.cumdiff + self.cumhill + self.cumfail - old_cumdiff - old_cumhill - old_cumfail
+            erosion_tot  = old_cumfail+old_cumdiff+old_cumhill
             tstep = self.tNow - old_t
 
+            # updates topographic shielding and surface quartz and 10Be maps
             if self.input.Qmap:
                 self.topo_shield = self.cosmo.topography_shielding(self.input.shieldfact,self.ice_thck,self.force.sealevel,self.elevation,\
                         self.FVmesh.neighbours,self.FVmesh.edge_length)
-                new_bedrock_Be,self.prodrate = self.cosmo.compute_Be_concentration(self.force.sealevel,self.elevation,self.topo_shield,self.qprop,\
-                        self.bedrock_Be,erosion,tstep)
+                new_bedrock_Be,self.prodrate, self.qprop = self.cosmo.compute_Be_concentration(self.force.sealevel,self.elevation,self.topo_shield,self.qprop,\
+                        self.bedrock_Be,erosion_tot,erosion_diff,tstep)
 
                 self.bedrock_Be,self.qprop = self.cosmo.update_Qz_Be(new_bedrock_Be,self.qprop)
         tloop = time.time() - last_time

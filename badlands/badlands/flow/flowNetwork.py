@@ -147,8 +147,8 @@ class flowNetwork:
             globalIDs: numpy integer-type array containing for local nodes their global IDs.
             type: flag to compute the diffusion when multiple rocks are used.
             Sc: critical slope parameter for non-linear diffusion.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns:
             - diff_flux - numpy array containing erosion/deposition thicknesses induced by hillslope processes.
@@ -184,8 +184,8 @@ class flowNetwork:
             edges: numpy real-type array with the voronoi edges length for each neighbours of the TIN nodes.
             distances: numpy real-type array with the distances between each connection in the TIN.
             globalIDs: numpy integer-type array containing for local nodes their global IDs.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns
         -------
@@ -219,8 +219,8 @@ class flowNetwork:
             edges: numpy real-type array with the voronoi edges length for each neighbours of the TIN nodes.
             distances: numpy real-type array with the distances between each connection in the TIN.
             globalIDs: numpy integer-type array containing for local nodes their global IDs.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns
         -------
@@ -272,8 +272,8 @@ class flowNetwork:
             edges: numpy real-type array with the voronoi edges length for each neighbours of the TIN nodes.
             distances: numpy real-type array with the distances between each connection in the TIN.
             globalIDs: numpy integer-type array containing for local nodes their global IDs.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns
         -------
@@ -305,8 +305,8 @@ class flowNetwork:
             layh: numpy arrays containing the thickness of the active layer.
             distances: numpy real-type array with the distances between each connection in the TIN.
             globalIDs: numpy integer-type array containing for local nodes their global IDs.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns
         -------
@@ -492,13 +492,6 @@ class flowNetwork:
         self.discharge = numpy.zeros(numPts, dtype=float)
         self.discharge[self.stack] = Acell[self.stack] * rain[self.stack]
 
-        #if ice is not None:
-            #iceIDs = numpy.where(ice>20.)[0]
-            #self.discharge[iceIDs]  = 0
-            #assumes no discharge where there is no meltwaters
-            #freezeIDs = numpy.where(numpy.logical_and(melt_waters <= 0., ice > 0))[0]
-            #self.discharge[freezeIDs] = 0.
-
         # Compute discharge using libUtils
         self.discharge, self.activelay = flowalgo.discharge(sealevel, self.localstack, self.receivers,
                                                         elev, self.discharge)
@@ -635,8 +628,8 @@ class flowNetwork:
             sealevel: real value giving the sea-level height at considered time step.
             slp_cr: critical slope used to force aerial deposition for alluvial plain.
             perc_dep: maximum percentage of deposition at any given time interval.
-            qpr: quartz proportion in nodes (CP)
-            nbe: 10Be concentration in quartz-bearing rocks (at.g-1 per gram of Qtz) (CP).
+            qpr: quartz proportion in nodes (1 for 100% quartz)
+            nbe: 10Be concentration in quartz-bearing rocks (at per gram of Qtz).
 
         Returns
         -------
@@ -649,7 +642,7 @@ class flowNetwork:
         newdt
             new time step to ensure flow computation stability.
         diff_Qz
-            numpy array containing Quartz content in sediments.
+            numpy array containing Quartz concentration (1 for 100% quartz) in sediments.
         diff_Be
             numpy array containing 10Be concentration in sediments.
 
@@ -747,19 +740,19 @@ class flowNetwork:
                             print('WARNING: overfilling persists after time-step limitation.',len(overfilled))
 
             # Update river sediment load in m3/s
-            sedld = numpy.sum(sedload,axis=1)
+            sedld        = numpy.sum(sedload,axis=1)
             self.sedload = sedld/(newdt*3.154e7)
-            den = flowdensity/1000.
+            den          = flowdensity/1000.
             self.flowdensity = den
             # Sediment volume going out
             outload = numpy.sum(sedload[self.outsideIDs,:])
 
             # Compute Quartz proportion and 10Be concentration in deposited sediments
-            deposum = numpy.sum(cdepo,axis=1)
-            depoIDs = numpy.where((deposum > 0) & (qdep>0)) [0]
+            deposum         = numpy.sum(cdepo,axis=1)
+            depoIDs         = numpy.where((deposum > 0) & (qdep>0)) [0]
             q_prop[depoIDs] = qdep[depoIDs]/deposum[depoIDs]
-            QIDs = numpy.where(qdep>0)[0]
-            sed_be[QIDs] = n_at_be[QIDs]/qdep[QIDs]/1000/rhosed
+            QIDs            = numpy.where(qdep>0)[0]
+            sed_be[QIDs]    = n_at_be[QIDs]/qdep[QIDs]/1000/rhosed
 
             # Compute erosion
             erosion = numpy.zeros(cero.shape)
@@ -799,7 +792,6 @@ class flowNetwork:
                     if verbose:
                         print("   - Compute plain deposition ", time.time() - time1)
                         time1 = time.time()
-
                 # Compute land pit deposition
                 if nland > 0:
                     landIDs = landid[:nland]
@@ -816,15 +808,6 @@ class flowNetwork:
                         deposition[tmp,:] += tmpdep[tmp,:]
                         deposum   = numpy.sum(tmpdep[tmp,:],axis=1)*Acell[tmp]
                         depoIDs   = numpy.where((deposum > 0) & (qdep[tmp]>0)) [0]
-                        q_prop[tmp[depoIDs]] = qdep[tmp[depoIDs]]/deposum[depoIDs]
-                        QIDs      = numpy.where(qdep[tmp]>0)[0]
-                        sed_be[tmp[QIDs]]    = n_at_be[tmp[QIDs]]/qdep[tmp[QIDs]]/1000/rhosed
-                    #deposum   = numpy.sum(tmpdep[landIDs,:],axis=1)*Acell[landIDs]
-                    #depoIDs   = numpy.where((deposum > 0) & (qdep[landIDs]>0)) [0]
-
-                    #q_prop[landIDs[depoIDs]] = qdep[landIDs[depoIDs]]/deposum[depoIDs]
-                    #QIDs                     = numpy.where(qdep[landIDs]>0)[0]
-                    #sed_be[landIDs[QIDs]]    = n_at_be[landIDs[QIDs]]/qdep[landIDs[QIDs]]/1000/rhosed
                     depo[landIDs,:] = 0.
                     if verbose:
                         print("   - Compute land pit deposition ", time.time() - time1)
@@ -843,10 +826,10 @@ class flowNetwork:
                     # Compute Quartz proportion and 10Be concentration in deposited sediments
                     deposum            = numpy.sum(seadep, axis = 1)
                     Q_depoIDs          = numpy.where((deposum > 0) & (qdep_s>0)) [0]
-
                     q_prop[Q_depoIDs]  = qdep_s[Q_depoIDs] / deposum[Q_depoIDs]
                     Be_depoIDs         = numpy.where(n_at_be_s > 0)[0]
                     sed_be[Be_depoIDs] = n_at_be_s[Be_depoIDs] / qdep_s[Be_depoIDs]  / 1000 / rhosed
+
                     # depo -= seadep*Acell.reshape(len(Acell),1)
                     depo[seaIDs,:] = 0.
                     if verbose:

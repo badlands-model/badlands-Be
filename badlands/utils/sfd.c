@@ -205,6 +205,10 @@ void diffusion(double pyZ[], double pyQz[], double pyBe[], int pyBord[], int pyN
 		pyQprop[gid] = pyDiffQz / totdep;
 		new_Be[gid] = pyDiffBe / pyDiffQz / rhosed / 1000;
 	}
+    if (pyQprop[gid] < 0.01 && new_Be[gid] > 0){
+        pyQprop[gid] = 0;
+        new_Be[gid] = 0;
+    }
     }
 }
 

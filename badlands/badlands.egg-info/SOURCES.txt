@@ -4,19 +4,7 @@ README.md
 setup.cfg
 setup.py
 badlands/__init__.py
-badlands/flowalgo.cpython-36m-x86_64-linux-gnu.so
-badlands/flowalgo.cpython-38-x86_64-linux-gnu.so
-badlands/fvframe.cpython-36m-x86_64-linux-gnu.so
-badlands/fvframe.cpython-38-x86_64-linux-gnu.so
 badlands/model.py
-badlands/ormodel.cpython-36m-x86_64-linux-gnu.so
-badlands/ormodel.cpython-38-x86_64-linux-gnu.so
-badlands/pdalgo.cpython-36m-x86_64-linux-gnu.so
-badlands/pdalgo.cpython-38-x86_64-linux-gnu.so
-badlands/sfd.cpython-36m-x86_64-linux-gnu.so
-badlands/sfd.cpython-38-x86_64-linux-gnu.so
-badlands/waveseds.cpython-36m-x86_64-linux-gnu.so
-badlands/waveseds.cpython-38-x86_64-linux-gnu.so
 badlands.egg-info/PKG-INFO
 badlands.egg-info/SOURCES.txt
 badlands.egg-info/dependency_links.txt
@@ -49,7 +37,6 @@ badlands/underland/carbMesh.py
 badlands/underland/eroMesh.py
 badlands/underland/strataMesh.py
 badlands/underland/stratiWedge.py
-utils/.DS_Store
 utils/Makefile
 utils/classfv.f90
 utils/classfv.mod

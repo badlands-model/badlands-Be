@@ -22,8 +22,10 @@ class cosmoProd:
     Nn is for neutron spallation
     Nf is for fast muon capture
     Ns is for slow muon capture
+    Qp is the initial quartz proportion
+    Be is the bedrock (without sediments) Be concentration
     """
-    N_dic = {'Nnval':[],'Nfval':[],'Nsval':[]}
+    N_dic = {'Nnval':[],'Nfval':[],'Nsval':[],'Qp':[],'Be':[]}
 
     def __init__(self,lati):
         """
@@ -35,7 +37,7 @@ class cosmoProd:
         Production rates for spallation, slow and fast muons capture
         L_n,L_f and Ls are attenuation lengths for neutrons, fast and slow muons in g. cm-2
         see parameters in Stone et al. 2000 and Braucher et al. 2011
-        Coeff is used to calibrate production rates according to Mariotti et al., 2019
+        self.coeff can be used to calibrate production rates with existing data
         """
         self.spall_prod_rate = 4.11
         self.slow_prod_rate  = 0.011
@@ -52,9 +54,9 @@ class cosmoProd:
         self.L_f = 4320.
         self.L_s = 1500.
         self.Be_lambda = 4.9867E-7
-        self.rho = 2.7
+        self.rho = 2.5
         self.lat = lati 
-        self.coeff = 1.2
+        self.coeff = 1.
 
         return
 
@@ -63,6 +65,11 @@ class cosmoProd:
         Computes 10Be production rate depending on latitude and altitude 
         and topographic shielding
         TCN production is in atoms per gram of Qtz per year
+        returns
+        prodn is for neutron spallation production rate
+        prodf for fast muon capture production rate
+        prods is for slow muon capture production rate
+        P_rate is the total production rate (used for output)
         """
         numpts = len(elevation)
         p_atm = numpy.zeros(numpts)
@@ -87,10 +94,11 @@ class cosmoProd:
         slambda = a + b*numpy.exp(-p_atm/150) + c*p_atm + d*p_atm**2 + e*p_atm**3
         mlambda = m*numpy.exp((1013.25-p_atm)/242)
 
-        notQIDs= numpy.where(qprop<=0)[0]
-        prodn = self.f_spall*slambda*self.spall_prod_rate * tshield * self.coeff
-        prods = self.f_slow*mlambda*self.slow_prod_rate   * tshield * self.coeff
-        prodf = self.f_fast*mlambda*self.fast_prod_rate   * tshield * self.coeff
+        prodn = self.f_spall*slambda*self.spall_prod_rate * tshield * self.coeff 
+        prods = self.f_slow*mlambda*self.slow_prod_rate   * tshield * self.coeff 
+        prodf = self.f_fast*mlambda*self.fast_prod_rate   * tshield * self.coeff 
+
+        notQIDs= numpy.where(qprop<=0.01)[0]
         prodn[notQIDs]=0
         prods[notQIDs]=0
         prodf[notQIDs]=0
@@ -155,10 +163,10 @@ class cosmoProd:
 
         return shield_mean   
 
-    def compute_Be_concentration (self,seal,elev,tshield,qprop,nbe,cero,tstep):
+    def compute_Be_concentration (self,seal,elev,tshield,qprop,nbe,erotot,ero_d,tstep):
         """
         Function computing  10Be concentration at the surface due to cosmic
-        ray exposure duration in at. g-1
+        ray exposure, in at. g-1
 
         Parameters
         ----------
@@ -177,6 +185,13 @@ class cosmoProd:
         cero
             Numpy real-type array with the amount of erosion at the given timestep.
 
+        erotot
+            Numpy array of erosion and deposition at the previous time step
+
+        bedrock_be
+            Numpy array of theoretical 10Be concentration in bedrock if it was covered by sediments
+            (i.e. no production and no erosion)
+
         """
         numpts  = len(elev)
         # computes topographic shielding angle and 10Be production rate
@@ -184,34 +199,66 @@ class cosmoProd:
 
         # computes 10Be concentration at the surface on each node
         # use Eulerian formulation see paper by Knudsen et al. 2019 Quater. Geol.
-        # TCN concentration is in atoms per gram of Qtz so we convert the erosion rate
-        # taking into account the Qtz concentration
+        # TCN concentration is in atoms per gram of Qtz
 
-        Nn = self.N_dic['Nnval']
-        Nf = self.N_dic['Nfval']
-        Ns = self.N_dic['Nsval']
+        Nn         = self.N_dic['Nnval']
+        Nf         = self.N_dic['Nfval']
+        Ns         = self.N_dic['Nsval']
+        qp_init    = self.N_dic['Qp']
+        bedrock_be = self.N_dic['Be']
 
-        for i in range(1,numpts):
-            erosion = -cero[i]*self.rho*100*qprop[i]/tstep
-            An = (self.Be_lambda + erosion/self.L_n)*tstep
-            Af = (self.Be_lambda + erosion/self.L_f)*tstep
-            As = (self.Be_lambda + erosion/self.L_s)*tstep
-            # adapts 10Be concentration to new erosion rate
-            if erosion > 0 and elev[i] >= seal :
-               Nn[i] = numpy.exp(-An) * (Nn[i] + prod_raten[i] * 1/(self.Be_lambda + erosion/self.L_n) * (numpy.exp(An)-1))
-               Nf[i] = numpy.exp(-Af) * (Nf[i] + prod_ratef[i] * 1/(self.Be_lambda + erosion/self.L_f) * (numpy.exp(Af)-1))
-               Ns[i] = numpy.exp(-As) * (Ns[i] + prod_rates[i] * 1/(self.Be_lambda + erosion/self.L_s) * (numpy.exp(As)-1))
-            else:
-               Nn[i] = nbe[i] * numpy.exp(-self.Be_lambda*tstep) 
-               Nf[i] = 0
-               Ns[i] = 0
+        bedrock_be = bedrock_be*numpy.exp(-self.Be_lambda*tstep)
+
+        # approximative ratio of each production mode 
+        ratio_pn = 0.9999
+        ratio_ps = 3.26e-5
+        ratio_pf = 1.-ratio_pn-ratio_ps
+
+        qp = numpy.copy(qprop)
+        qp[numpy.where(qprop<=0.01)[0]] = 0.
+        cero = numpy.copy(ero_d)
+
+        # erosion is in g_Qtz.cm-2.a-1
+        erosion = -cero*self.rho*100*qp/tstep
+        An = (self.Be_lambda + erosion/self.L_n)*tstep
+        Af = (self.Be_lambda + erosion/self.L_f)*tstep
+        As = (self.Be_lambda + erosion/self.L_s)*tstep
+
+        #deposition
+        depoID = numpy.where( (-cero<0) | (elev<=seal)) [0]
+        #eroded bedrock
+        ero_bedID = numpy.where(numpy.logical_and(-cero>=0,erotot<0,elev>seal))[0]
+        #eroded sediments but not down to bedrock
+        ero_sedID = numpy.where(numpy.logical_and(-cero>=0,erotot+cero>=0,elev>seal))[0]
+        #eroded sediments down to bedrock
+        ero_sedbedID = numpy.where( (-cero>=0) & (erotot>0) & (erotot+cero<0) )[0]
+
+        #eroded bedrock or sediments (not down to bedrock) = solution with erosion, decay and production
+        Nn[ero_bedID] = numpy.exp(-An[ero_bedID]) * (Nn[ero_bedID] + prod_raten[ero_bedID] * 1/(self.Be_lambda + erosion[ero_bedID]/self.L_n) * (numpy.exp(An[ero_bedID])-1))
+        Nf[ero_bedID] = numpy.exp(-Af[ero_bedID]) * (Nf[ero_bedID] + prod_ratef[ero_bedID] * 1/(self.Be_lambda + erosion[ero_bedID]/self.L_f) * (numpy.exp(Af[ero_bedID])-1))
+        Ns[ero_bedID] = numpy.exp(-As[ero_bedID]) * (Ns[ero_bedID] + prod_rates[ero_bedID] * 1/(self.Be_lambda + erosion[ero_bedID]/self.L_s) * (numpy.exp(As[ero_bedID])-1))
+        Nn[ero_sedID] = numpy.exp(-An[ero_sedID]) * (Nn[ero_sedID] + prod_raten[ero_sedID] * 1/(self.Be_lambda + erosion[ero_sedID]/self.L_n) * (numpy.exp(An[ero_sedID])-1))
+        Nf[ero_sedID] = numpy.exp(-Af[ero_sedID]) * (Nf[ero_sedID] + prod_ratef[ero_sedID] * 1/(self.Be_lambda + erosion[ero_sedID]/self.L_f) * (numpy.exp(Af[ero_sedID])-1))
+        Ns[ero_sedID] = numpy.exp(-As[ero_sedID]) * (Ns[ero_sedID] + prod_rates[ero_sedID] * 1/(self.Be_lambda + erosion[ero_sedID]/self.L_s) * (numpy.exp(As[ero_sedID])-1))      
+
+        #eroded sediments down to bedrock = return to bedrock values (with decay and no production)
+        Nn[ero_sedbedID] = bedrock_be[ero_sedbedID] * ratio_pn 
+        Nf[ero_sedbedID] = bedrock_be[ero_sedbedID] * ratio_pf 
+        Ns[ero_sedbedID] = bedrock_be[ero_sedbedID] * ratio_ps
+        qprop[ero_sedbedID]  = qp_init[ero_sedbedID]
+
+        #deposited sediments with production (null at sea) and decay
+        Nn[depoID] = ( nbe[depoID] * ratio_pn - prod_raten[depoID]/self.Be_lambda ) * numpy.exp(-self.Be_lambda*tstep) + prod_raten[depoID]/self.Be_lambda
+        Nf[depoID] = ( nbe[depoID] * ratio_pf - prod_ratef[depoID]/self.Be_lambda ) * numpy.exp(-self.Be_lambda*tstep) + prod_ratef[depoID]/self.Be_lambda
+        Ns[depoID] = ( nbe[depoID] * ratio_ps - prod_rates[depoID]/self.Be_lambda ) * numpy.exp(-self.Be_lambda*tstep) + prod_rates[depoID]/self.Be_lambda
 
         N_Be =  Nn + Ns + Nf
         self.N_dic['Nnval']=Nn
         self.N_dic['Nfval']=Nf
         self.N_dic['Nsval']=Ns
+        self.N_dic['Be']=bedrock_be
 
-        return N_Be, prod_rate
+        return N_Be, prod_rate, qprop
 
     def compute_init_Be(self,seal,elev,tshield,qprop,erorate):
         """
@@ -243,17 +290,16 @@ class cosmoProd:
         numpts  = len(elev)
         N_Be    = numpy.zeros(numpts)
 
-        # eliminates interpolation effect on quartz map
-        qp                             = numpy.copy(qprop)
-        qmax                           = numpy.max(qprop)
-        qp[numpy.where(qprop<=0.1)[0]] = 0.
-        qp[numpy.where(qprop>0.4)[0]]  = qmax
+        # eliminates interpolation noise on quartz map
+        qp      = numpy.copy(qprop)
+        qmax    = numpy.max(qprop)
+        qp[numpy.where(qprop<=0.01)[0]] = 0.
+        qp[numpy.where(qprop>0.01)[0]]  = qmax
 
         prod_raten,prod_rates,prod_ratef,prod_rate = self.Be_production_rate(elev,tshield,qp)
 
         # computes 10Be concentration at the surface on each node
-        # in g.cm-2.a-1
-
+        # in g_Qtz.cm-2.a-1
         erosion_rate  = erorate*100*self.rho*qp
 
         # compute initial 10Be concentration assuming steady state
@@ -264,13 +310,16 @@ class cosmoProd:
         self.N_dic['Nnval']=Nn
         self.N_dic['Nfval']=Nf
         self.N_dic['Nsval']=Ns
+        self.N_dic['Qp'] = qp
+        self.N_dic['Be'] = N_Be
 
         return N_Be, prod_rate
 
     def update_Qz_Be(self,nbe,qpr):
-       """ Update Quartz map removing nodes under a quartz concentration threshold
+       """ Update Quartz map and 10Be concentration removing nodes under
+        a quartz concentration threshold of 1%
        """
-       noQIDs     = numpy.where(qpr < 0.001)
+       noQIDs     = numpy.where(qpr < 0.01)
        qpr[noQIDs]= 0.
        nbe[noQIDs]= 0.
        return nbe,qpr

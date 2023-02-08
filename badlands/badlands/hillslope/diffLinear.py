@@ -199,10 +199,9 @@ class diffLinear:
         areacoeff[self.ids] = 1./area[self.ids]
         coeff = numpy.where(elevation >= sea, self.CDaerial, self.CDmarine)
 
-        # Adapts diffusion coefficient to ice thickness (CP2022)
-        iceIDs = numpy.where (ice>50)[0]
+        # Adapts diffusion coefficient to ice thickness 
+        iceIDs = numpy.where (ice>10)[0]
         coeff[iceIDs] = self.icediff*ice[iceIDs]
-
 
         return numpy.nan_to_num(areacoeff * coeff)
 

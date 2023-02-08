@@ -48,5 +48,5 @@
 <cmarine>0.025</cmarine>
 <criver>0.025</criver>
 </creep>        
-<outfolder>/mnt/d/SPM/Output/Alpsmodel_short</outfolder>
+<outfolder>Alpsmodel_short</outfolder>
 </badlands>

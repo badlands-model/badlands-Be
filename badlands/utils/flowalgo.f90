@@ -464,6 +464,7 @@ subroutine diffmarine(pyZ, pyQpr, pyNBe, pyBord, pyDepoH, pyNgbs, pyEdge, pyDist
   new_qprop = pyQpr
   new_Be    = pyNBe
   mindt     = tstep
+
   do k = 1, pylocalNb
     pyDiffQz = 0.
     pyDiffBe = 0.
@@ -970,7 +971,8 @@ pylNodesNb, pygNodesNb, pyRockNb)
         enddo
         if (pyDischarge(donor) > 0.) then
            if (pyA .gt. 0 .and. pyB .gt. 0) then
-                   Cs = (pyA*(pyDischarge(donor)/3.154e7)**pyB)*1000
+                   ! Cs = (pyA*(pyDischarge(donor)/3.154e7)**pyB)*1000
+                   Cs = pyA*(pyDischarge(donor))**pyB
                    pyDensity(donor) = rhowat + Cs 
            else
                    pyDensity(donor) = (totflx/(dt*pyDischarge(donor)))*rhosed+(1-totflx/(dt*pyDischarge(donor)))*rhowat
@@ -1383,13 +1385,6 @@ pylNodesNb, pygNodesNb, pyRockNb)
         tmpdist = 0.
         do r = 1, pyRockNb
           tmpdist = tmpdist + pyDepo(tmpID,r)
-          !if (pitDep(r) > 0) then
-          !      fracQ(r) = pitDepQ(r)/pitDep(r)
-          !      fracBe(r) = pitDepBe(r)/pitDep(r)
-          !else
-          !      fracQ(r) = 0.
-          !      fracBe(r) = 0.
-          !endif
         enddo
 
         ! In case the depression is underwater
@@ -1447,11 +1442,10 @@ pylNodesNb, pygNodesNb, pyRockNb)
                pitDep(r) = (totdist - (pitVol(tmpID) - tmpdist))*frac
                newdist = newdist + pitDep(r)
                totflx = totflx + pyDepo(tmpID,r)
-
                pyDepoQ(tmpID)  = pyDepoQ(tmpID) + (pitVol(tmpID) - tmpdist)*frac*fracQ(r) 
                pyDepoBe(tmpID) = pyDepoBe(tmpID) + (pitVol(tmpID) - tmpdist)*frac*fracBe(r) 
-               pitDepQ(r) = pitDepQ(r) - (pitVol(tmpID) - tmpdist)*frac*fracQ(r)
-               pitDepBe(r) = pitDepBe(r) - (pitVol(tmpID) - tmpdist)*frac*fracBe(r) 
+               !pitDepQ(r) = pitDepQ(r) - (pitVol(tmpID) - tmpdist)*frac*fracQ(r)
+               !pitDepBe(r) = pitDepBe(r) - (pitVol(tmpID) - tmpdist)*frac*fracBe(r) 
                pitDepQ(r) = 0.
                pitDepBe(r) = 0.
              enddo

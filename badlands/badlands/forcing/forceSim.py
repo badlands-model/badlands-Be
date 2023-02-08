@@ -242,8 +242,8 @@ class forceSim:
         return
 
     def getIceratio(self,time):
-        """ computes average ice ratio at time T according to input file parameters
-            CP"""
+        """ computes average ice ratio at time T according to input file parameters such as 
+            ice ratio = 1 gives ice thickness equal to the ice map"""
         if self.icecurve == None:
             self.iceratio = 0.
         else:
@@ -254,15 +254,21 @@ class forceSim:
             self.iceratio = self.IceFunc(time)
         return
 
-    def getIcethck (self,icemap,iceratio):
-        """ computes ice map thickness according to glacier extent and ice thickness file
-            CP"""
-
+    def getIcethck (self,icemap,iceratio,oldicethck):
+        """ computes ice map thickness and meltwater height 
+            according to glacier extent and ice thickness file"""
         ice          = icemap*self.iceratio
+        # compute the height of ice that has molten
+        ice_melt     = oldicethck - ice
         noiceIDs     = numpy.where(ice <=10)[0]
         ice[noiceIDs]= 0.
 
-        return ice
+        meltIDs      = numpy.where(ice_melt >=0 )[0]
+        # converts molten ice to water height and equivalent 'rain' for discharge
+        water          = numpy.zeros(len(ice))
+        water[meltIDs] = ice_melt[meltIDs]*0.93/self.time_display
+
+        return ice,water
 
     def getRivers(self, time):
         """
@@ -311,16 +317,22 @@ class forceSim:
         self.dx = self.tXY[1,0] - self.tXY[0,0]
 
     def get_Qtz(self,inIDs):
-        """ get quartz map and constructs TIN grid (CP)"""
+        """ get quartz map and constructs Quartz TIN grid"""
 
         QMap = pandas.read_csv(str(self.Q_map), sep=r'\s+',header=None, dtype=numpy.float)
         rectQ = numpy.reshape(QMap.values,(len(self.regX),len(self.regY)),order='F')
         tinQ = interpolate.interpn((self.regX,self.regY), rectQ, self.tXY[inIDs,:],method = 'linear')
         
+        # eliminates interpolation noise on quartz map
+        qp      = numpy.copy(tinQ)
+        qmax    = numpy.max(tinQ)
+        tinQ[numpy.where(qp<=0.01)[0]] = 0.
+        tinQ[numpy.where(qp>0.01)[0]]  = qmax
+
         return tinQ
 
     def get_Ice(self,inIDs):
-        """ get ice map and constructs TIN grid (CP)"""
+        """ get ice map and constructs Ice TIN grid"""
 
         IceMap = pandas.read_csv(str(self.ice_map), header=None, dtype=numpy.float)
         rectI = numpy.reshape(IceMap.values,(len(self.regX),len(self.regY)),order='F')
@@ -328,7 +340,7 @@ class forceSim:
         return tinI
 
     def reload_Qtz(self):
-        """ Reloads file Qtz.out from previous run (CP)"""
+        """ Reloads file Qtz.out from previous run"""
 
         print ("reloading Qtz map")
         f = open ("Qtz.out",'r')
@@ -343,7 +355,7 @@ class forceSim:
         return qpr
             
     def reload_Be(self):
-        """ Reloads file Qtz.out from previous run (CP)"""
+        """ Reloads file Qtz.out from previous run"""
 
         print ("reloading Be map")
         f = open ("Nbe.out",'r')

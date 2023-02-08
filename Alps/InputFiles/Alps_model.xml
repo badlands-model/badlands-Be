@@ -13,7 +13,7 @@
 </time>
 <sea>
 <position>0.</position>
-<!--curve>../Data/sealevel100ka.txt</curve-->
+<curve>../Data/sealevel100ka.txt</curve>
 </sea>
 <precipitation>
 <climates>2</climates>
@@ -55,7 +55,7 @@
 <ice_erosion>5.e-6</ice_erosion>
 </ice_cover>     
 <creep>
-<caerial>0.001</caerial>
+<caerial>0.01</caerial>
 <cmarine>0.025</cmarine>
 <criver>0.025</criver>
 </creep> 
@@ -70,5 +70,5 @@
 <boundary_S>0Slope0Shear</boundary_S>
 <boundary_N>0Slope0Shear</boundary_N>
 </flexure-->       
-<outfolder>/mnt/d/SPM/Output/Alpsmodel</outfolder>
+<outfolder>Alps_test_rev_d</outfolder>
 </badlands>

@@ -226,7 +226,7 @@ class isoFlex:
             - flexureTIN - numpy array containing flexural deflection values for the TIN.
         """
 
-        # Average volume of sediment and water on the flexural grid points
+        # Average volume of sediment, ice and water on the flexural grid points
         sedload            = numpy.zeros(len(self.xyi))
         waterload          = numpy.zeros(len(self.xyi))
         iceload            = numpy.zeros(len(self.xyi))
